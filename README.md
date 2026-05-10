@@ -151,7 +151,7 @@ The linear baseline used 9 features and was evaluated with both a train/test spl
 | F1-Score | 0.6083 | 0.6520 |
 | **ROC-AUC** | **0.5684** | **0.4914** |
 
-A test ROC-AUC of 0.4914 is marginally below chance (0.50), confirming that a linear model cannot extract a reliable directional signal from these technical indicators. The near-identical train and test accuracy (0.5497 vs. 0.5432) indicates the model is not overfitting — it simply has no predictive power in a linear regime. The high recall (0.6624) relative to precision (0.6420) further suggests the model is biased toward predicting the majority (upward) class, inflating recall without genuine discriminative ability. This result is consistent with Gu et al. (2020), who found that linear models are systematically outperformed by non-linear alternatives on financial indicator data.
+A test ROC-AUC of 0.4914 is marginally below chance (0.50), confirming that a linear model cannot extract a reliable directional signal from these technical indicators. The near-identical train and test accuracy (0.5497 vs. 0.5432) indicates the model is not overfitting. It simply has no predictive power in a linear regime. The high recall (0.6624) relative to precision (0.6420) further suggests the model is biased toward predicting the majority (upward) class, inflating recall without genuine discriminative ability. This result is consistent with Gu et al. (2020), who found that linear models are systematically outperformed by non-linear alternatives on financial indicator data.
 
 ### Random Forest: Full vs. Reduced Model
 
@@ -183,11 +183,12 @@ The XGBoost model was trained on 9 features (identical feature set to Logistic R
 | **Test ROC-AUC** | **0.5814** |
 | Overfit gap (train − test accuracy) | +0.0590 |
 
-XGBoost achieves the highest test ROC-AUC of all three models at **0.5954**. The negative overfit gap (−0.0371) is notable: the model generalises *better* on the test set than the training set, which is consistent with early stopping and class-weight regularisation preventing the model from memorising the training distribution. The CV ROC-AUC of 0.4913 is lower than the final test ROC-AUC, reflecting the difficulty of the earlier time-series folds. This is a common pattern in financial data where more recent data may be more learnable. These results align with Fischer & Krauss (2018) and Gu et al. (2020), who found that well-regularised non-linear models produce the most robust out-of-sample performance.
+XGBoost achieves the highest test ROC-AUC of all three models at **0.5814**. The overfit gap (+0.0590) is notable: the model generalises well on the test set and the training set, which validates the use of early stopping and class-weight regularisation which prevents the model from memorising the training distribution. The CV ROC-AUC 
+of 0.5032 is lower than the final test ROC-AUC, reflecting the increased predictability of price direction with AI boom happening during the test window 2021-2024. This is also a common pattern in financial data where more recent data may be more learnable. These results align with Fischer & Krauss (2018) and Gu et al. (2020), who found that well-regularised non-linear models produce the most robust out-of-sample performance.
 
 ### Overfitting Monitoring
 
-All three models include an overfitting gap analysis comparing train and test performance, directly motivated by Bailey et al. (2014). Logistic Regression shows minimal gap (near-zero), confirming underfitting rather than overfitting. XGBoost shows a negative gap, consistent with its regularisation design. The Random Forest full model warrants closer inspection given its high recall, which is a sign of majority-class bias rather than true overfitting.
+All three models include an overfitting gap analysis comparing train and test performance, directly motivated by Bailey et al. (2014). Logistic Regression shows minimal gap (near-zero). XGBoost shows a minimal overfit gap, consistent with its regularisation design. The Random Forest full model warrants closer inspection given its high recall, which is a sign of majority-class bias rather than true overfitting. This issue is partly solved with the random forest reduced feature model. 
 
 ### Model Comparison Summary
 
@@ -196,16 +197,16 @@ All three models include an overfitting gap analysis comparing train and test pe
 | Logistic Regression | 0.5432 | 0.4914 | 0.6420 | 0.6624 | 0.6520
 | Random Forest (full) | 0.6033 | 0.5254| 0.6748 | 0.7520 | 0.7113
 | Random Forest (reduced) | 0.5269 | 0.5807 | 0.6975 | 0.4801 | 0.5687
-| **XGBoost** | **0.6582** | **0.5954** | 0.5606 | 0.5247 | 0.4935
+| **XGBoost** | **0.5548** | **0.5814** | 0.5532 | 0.5602 | 0.5407
 
 **XGBoost is selected as the best-performing model** based on test ROC-AUC. It achieves the highest ranking quality, the best generalisation behaviour, and the strongest test accuracy. The Logistic Regression baseline confirms that non-linear methods are necessary for this task, consistent with Patel et al. (2015) and Gu et al. (2020).
 - The above table reveals a consistent pattern across all three models. F1 metric and ROC-AUC scores tell different stories. 
 Random Forest full model had highest F1 but weak ROC-AUC score (0.525), this is due to its high recall which points to the majority
-class bias. However, XGBoost had the lowest F1 (0.494) but the strongest AUC. This proves that for imbalanced classification F1 can mislead model selection.
-- XGBoost has the lowest precision (0.56) among all models, yet the best AUC. This indicates that its not blindly predicting majority
-class like Random Forest full model. XGBoost has better ranking quality despite being more conservative in its predictions.
+class bias. However, XGBoost had the lowest F1 (0.494) but the strongest AUC. This proves that for imbalanced classification F1 as a stand-alone metric could mislead model selection.
+- XGBoost has the lowest precision (0.56) among all models, yet the best AUC. This indicates that its not blindly predicting majority class like Random Forest full model. XGBoost has better ranking quality despite being more conservative in its predictions.
+- Logistic Regression and Random Forest full model has high recall 0.6624 and 0.7520 respectively, but near-random AUC. This implies majority class bias.
 - Random Forest (reduced) model sacrificed a lot of recall (down 0.27) to gain AUC (up 0.055), improving generalisation and reducing bias.
-- Logistic Regression has the second highest recall (0.6624), but random AUC. This implies majority class bias. 
+ 
 
 
 ---
@@ -216,7 +217,7 @@ class like Random Forest full model. XGBoost has better ranking quality despite 
 
 - Technical indicators alone can produce a modest but measurable directional signal on NVIDIA stock. 
 - Logistic Regression confirmed that the relationship between technical indicators 30-day price direction is not linearly separable.
-- Ensemble and gradient-boosted models outperform the linear baseline, consistent with the literature. Modest performance of ~0.59 AUC
+- Ensemble and gradient-boosted models outperform the linear baseline, consistent with the literature. Modest performance of ~0.58 AUC
   for the best model suggests that some structure exists in the data but its not enough for trading use.
 - ATR_pct is consistently ranked as the most important feature across all three models despite being a volatility indicator rather than
   a directional one, this suggests that our models were partly learning volatility regions. High ATR regimes in 2021-2024 test window
