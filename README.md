@@ -53,6 +53,7 @@ Taken together, this literature suggests that (1) any model achieving consistent
 ### Raw Data
 
 Historical NVIDIA OHLCV data from `NVDA.csv` with columns: `Date`, `Open`, `High`, `Low`, `Close`, `Volume`.
+Date range: 1999-01-22 to 2025-02-14
 
 ### Pipeline (`DataPipeline.ipynb`)
 
@@ -71,17 +72,19 @@ The raw data is transformed into a modelling-ready dataset through:
 | Derived / distance | SMA20 Distance, Intraday Range |
 
 4. **Lag and rolling features** — lagged indicators (`RSI_lag1`, `ROC_lag1`) and rolling statistics (`ROC_roll5_mean`, `ROC_roll5_std`) added to capture short-term trends
-5. **NaN removal** — rows with missing values from rolling calculations dropped
+5. **NaN removal** — rows with missing values from rolling calculations dropped. New date range: 1999-04-05 to 2024-12-31
 6. **Target construction** — 30-day forward return computed; label `1` if positive, `0` otherwise
 7. **Output** — processed dataset saved to `model_data.csv`
 
 ### Class Balance
 
-The target variable exhibits a mild class imbalance: approximately **60% positive (upward)** and **40% negative/flat**. This is addressed differently per model (see Section 5).
+The target variable exhibits a mild class imbalance: approximately **62% positive (upward)** and **38% negative/flat**. This is addressed differently per model (see Section 5).
 
 ---
 
 ## 4. Methodology
+
+This project follows the **CRISP-DM** framework iteratively. Evaluation findings from Logistic Regression directly informed the decision to pursue ensemble methods, and feature selection was revised based on multicollinearity analysis and mutual information scores during the modelling phase. The phases map naturally to our workflow: Business Understanding covers the prediction task definition, Data Understanding covers EDA on NVDA OHLCV data, Data Preparation covers `DataPipeline.ipynb`, Modelling covers the three analysis notebooks, and Evaluation covers the cross-model comparison and metric interpretation.
 
 ### Validation Strategy
 
@@ -142,13 +145,13 @@ The linear baseline used 9 features and was evaluated with both a train/test spl
 
 | Metric | Train | Test |
 |---|---|---|
-| Accuracy | 0.5495 | 0.5382 |
-| Precision | 0.6508 | 0.6383 |
-| Recall | 0.5732 | 0.6677 |
-| F1-Score | 0.6095 | 0.6527 |
-| **ROC-AUC** | — | **0.4967** |
+| Accuracy | 0.5497 | 0.5432 |
+| Precision | 0.6498 | 0.6420 |
+| Recall | 0.5719 | 0.6624 |
+| F1-Score | 0.6083 | 0.6520 |
+| **ROC-AUC** | **0.5684** | **0.4914** |
 
-A test ROC-AUC of 0.4967 is marginally below chance (0.50), confirming that a linear model cannot extract a reliable directional signal from these technical indicators. The near-identical train and test accuracy (0.5495 vs. 0.5382) indicates the model is not overfitting — it simply has no predictive power in a linear regime. The high recall (0.6677) relative to precision (0.6383) further suggests the model is biased toward predicting the majority (upward) class, inflating recall without genuine discriminative ability. This result is consistent with Gu et al. (2020), who found that linear models are systematically outperformed by non-linear alternatives on financial indicator data.
+A test ROC-AUC of 0.4914 is marginally below chance (0.50), confirming that a linear model cannot extract a reliable directional signal from these technical indicators. The near-identical train and test accuracy (0.5497 vs. 0.5432) indicates the model is not overfitting — it simply has no predictive power in a linear regime. The high recall (0.6624) relative to precision (0.6420) further suggests the model is biased toward predicting the majority (upward) class, inflating recall without genuine discriminative ability. This result is consistent with Gu et al. (2020), who found that linear models are systematically outperformed by non-linear alternatives on financial indicator data.
 
 ### Random Forest: Full vs. Reduced Model
 
@@ -180,22 +183,30 @@ The XGBoost model was trained on 9 features (identical feature set to Logistic R
 | **Test ROC-AUC** | **0.5954** |
 | Overfit gap (train − test accuracy) | −0.0371 |
 
-XGBoost achieves the highest test ROC-AUC of all three models at **0.5954**. The negative overfit gap (−0.0371) is notable: the model generalises *better* on the test set than the training set, which is consistent with early stopping and class-weight regularisation preventing the model from memorising the training distribution. The CV ROC-AUC of 0.4913 is lower than the final test ROC-AUC, reflecting the difficulty of the earlier time-series folds — a common pattern in financial data where more recent data may be more learnable. These results align with Fischer & Krauss (2018) and Gu et al. (2020), who found that well-regularised non-linear models produce the most robust out-of-sample performance.
+XGBoost achieves the highest test ROC-AUC of all three models at **0.5954**. The negative overfit gap (−0.0371) is notable: the model generalises *better* on the test set than the training set, which is consistent with early stopping and class-weight regularisation preventing the model from memorising the training distribution. The CV ROC-AUC of 0.4913 is lower than the final test ROC-AUC, reflecting the difficulty of the earlier time-series folds. This is a common pattern in financial data where more recent data may be more learnable. These results align with Fischer & Krauss (2018) and Gu et al. (2020), who found that well-regularised non-linear models produce the most robust out-of-sample performance.
 
 ### Overfitting Monitoring
 
-All three models include an overfitting gap analysis comparing train and test performance, directly motivated by Bailey et al. (2014). Logistic Regression shows minimal gap (near-zero), confirming underfitting rather than overfitting. XGBoost shows a negative gap, consistent with its regularisation design. The Random Forest full model warrants closer inspection given its high recall — a sign of potential majority-class bias rather than true overfitting.
+All three models include an overfitting gap analysis comparing train and test performance, directly motivated by Bailey et al. (2014). Logistic Regression shows minimal gap (near-zero), confirming underfitting rather than overfitting. XGBoost shows a negative gap, consistent with its regularisation design. The Random Forest full model warrants closer inspection given its high recall, which is a sign of majority-class bias rather than true overfitting.
 
 ### Model Comparison Summary
 
-| Model | Test Accuracy | Test ROC-AUC
-|---|---|---
-| Logistic Regression | 0.5382 | 0.4967
-| Random Forest (full) | 0.6033 | 0.5254
-| Random Forest (reduced) | 0.5269 | 0.5807
-| **XGBoost** | **0.6582** | **0.5954**
+| Model | Test Accuracy | Test ROC-AUC | Test Precision | Test Recall | Test F1
+|---|---|---|---|---|---
+| Logistic Regression | 0.5432 | 0.4914 | 0.6420 | 0.6624 | 0.6520
+| Random Forest (full) | 0.6033 | 0.5254| 0.6748 | 0.7520 | 0.7113
+| Random Forest (reduced) | 0.5269 | 0.5807 | 0.6975 | 0.4801 | 0.5687
+| **XGBoost** | **0.6582** | **0.5954** | 0.5606 | 0.5247 | 0.4935
 
 **XGBoost is selected as the best-performing model** based on test ROC-AUC. It achieves the highest ranking quality, the best generalisation behaviour, and the strongest test accuracy. The Logistic Regression baseline confirms that non-linear methods are necessary for this task, consistent with Patel et al. (2015) and Gu et al. (2020).
+- The above table reveals a consistent pattern across all three models. F1 metric and ROC-AUC scores tell different stories. 
+Random Forest full model had highest F1 but weak ROC-AUC score (0.525), this is due to its high recall which points to the majority
+class bias. However, XGBoost had the lowest F1 (0.494) but the strongest AUC. This proves that for imbalanced classification F1 can mislead model selection.
+- XGBoost has the lowest precision (0.56) among all models, yet the best AUC. This indicates that its not blindly predicting majority
+class like Random Forest full model. XGBoost has better ranking quality despite being more conservative in its predictions.
+- Random Forest (reduced) model sacrificed a lot of recall (down 0.27) to gain AUC (up 0.055), improving generalisation and reducing bias.
+- Logistic Regression has the second highest recall (0.6624), but random AUC. This implies majority class bias. 
+
 
 ---
 
@@ -203,27 +214,44 @@ All three models include an overfitting gap analysis comparing train and test pe
 
 ### Key Findings
 
-- Technical indicators alone can produce a modest but measurable directional signal on NVIDIA stock.
-- Ensemble and gradient-boosted models outperform the linear baseline, consistent with the literature.
+- Technical indicators alone can produce a modest but measurable directional signal on NVIDIA stock. 
+- Logistic Regression confirmed that the relationship between technical indicators 30-day price direction is not linearly separable.
+- Ensemble and gradient-boosted models outperform the linear baseline, consistent with the literature. Modest performance of ~0.59 AUC
+  for the best model suggests that some structure exists in the data but its not enough for trading use.
+- ATR_pct is consistently ranked as the most important feature across all three models despite being a volatility indicator rather than
+  a directional one, this suggests that our models were partly learning volatility regions. High ATR regimes in 2021-2024 test window
+  correlated with upward movement due to the AI Boom.
+- Volume_Ratio was identified as the weakest feature across all three models. This is likely because relative volume loses discriminative 
+  power over a 30-day horizon. 
 - ROC-AUC is the most appropriate primary metric for this task; accuracy and F1 can be misleading under class imbalance.
-- Feature reduction based on importance can improve generalisation even when it lowers raw accuracy.
-- Class imbalance requires explicit handling; ignoring it biases models toward the majority class.
-- Strict time-series validation is essential — any shuffling or look-ahead produces inflated and non-reproducible results.
+- Feature reduction based on importance for tree-based models can improve model generalisation even when it lowers raw accuracy.
+- Class imbalance requires explicit handling; ignoring it biases models toward the majority class. XGBoost addressed it through a dedicated weight correction parameter, reducing its positive class bias. 
+- Strict time-series validation is essential. Any data shuffling or look-ahead produces inflated and non-reproducible results.
+  The temporal nature of the data needs to be preserved to avoid any leakages, as this can impact real trading performance.
+- From a societal perspective, our findings reinforce the importance of validation in Financial ML. Models that disregard the temporal
+  order or exploit unique market regimes can mislead investors and can cause poor trading decisions. Responsible deployment of such 
+  systems requires honest reporting of limitations and performance claims.
 
 ### Limitations
 
-- The dataset is restricted to a single equity (NVDA), limiting generalisability.
-- Technical indicators capture only price-based patterns; macroeconomic and sentiment signals are excluded.
-- Short historical coverage may not include diverse market regimes.
+- The most significant limitation is single-asset scope. NVDA experienced an extraordinary AI-driven bull run during the test period 
+  2021-2024. This creates a unique environment which limits generalisability to other equities and market conditions.
+- Our features are only based on price-volume data and the model lacks awareness of the macroeconomics, company fundamentals and news.
+- Despite 25 years of data, the 2021–2024 test period is unique due to the AI Boom. Our models trained on historical data have no 
+  mechanism to predict such shifts. This limits the feasibility of test-AUC score as a forward looking estimate of performance.
+- Predicting Price Up/Down treats a 1% gain same as a 30% gain, in practise these are completely different outcomes. A model which catches
+  a lot of tiny ups but misses the big moves can be less reliable as a trading tool.
 - A 30-day horizon is one of many possible choices; results may differ substantially at other horizons.
 
 ### Future Work
 
-- Incorporating macroeconomic features (e.g., interest rates, sector indices) or sentiment signals (e.g., news NLP) as additional inputs
+- Incorporating macroeconomic features (e.g., interest rates, sector rotation) or sentiment signals (e.g., news NLP) as additional inputs.
 - Testing alternative forecast horizons (5-day, 60-day)
-- Applying SHAP or permutation importance for deeper feature explainability
+- A multi-class model seperating big gains, noise and significant drops could prove more useful for real trading decisions. This can be 
+  revisited after incorporating data from more equities and market periods.
+- Walk-forward validation is something our models would benefit from. Retraining models on rolling windows and testing on successive
+  periods would give a much more reliable estimate of real world performance than the single fixed test window used here.
 - Exploring LSTM or Transformer architectures as per Fischer & Krauss (2018)
-- Improving class balance with resampling techniques (SMOTE, undersampling)
 - Extending the pipeline to a multi-asset universe following the approach of Gu et al. (2020)
 
 ---
