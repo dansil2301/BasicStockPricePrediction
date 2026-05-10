@@ -174,14 +174,14 @@ The XGBoost model was trained on 9 features (identical feature set to Logistic R
 | Metric | Value |
 |---|---|
 | Features | 9 — `MACD_Signal`, `BB_Width`, `RSI_lag1`, `ATR_Pct`, `SMA20_Dist`, `Stoch_K`, `ROC_roll5_mean`, `Volume_Ratio`, `CCI` |
-| CV ROC-AUC | 0.4913 |
-| Train Accuracy | 0.6211 |
-| Test Accuracy | 0.6582 |
-| Test Precision (macro) | 0.5606 |
-| Test Recall (macro) | 0.5247 |
-| Test F1 (macro) | 0.4935 |
-| **Test ROC-AUC** | **0.5954** |
-| Overfit gap (train − test accuracy) | −0.0371 |
+| CV ROC-AUC | 0.5032 |
+| Train Accuracy | 0.6137 |
+| Test Accuracy | 0.5548 |
+| Test Precision (macro) | 0.5532 |
+| Test Recall (macro) | 0.5602 |
+| Test F1 (macro) | 0.5407 |
+| **Test ROC-AUC** | **0.5814** |
+| Overfit gap (train − test accuracy) | +0.0590 |
 
 XGBoost achieves the highest test ROC-AUC of all three models at **0.5954**. The negative overfit gap (−0.0371) is notable: the model generalises *better* on the test set than the training set, which is consistent with early stopping and class-weight regularisation preventing the model from memorising the training distribution. The CV ROC-AUC of 0.4913 is lower than the final test ROC-AUC, reflecting the difficulty of the earlier time-series folds. This is a common pattern in financial data where more recent data may be more learnable. These results align with Fischer & Krauss (2018) and Gu et al. (2020), who found that well-regularised non-linear models produce the most robust out-of-sample performance.
 
